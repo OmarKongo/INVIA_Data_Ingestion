@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from controllers.Engine import Engine
 from database import get_db
@@ -11,10 +11,10 @@ sensor_route = APIRouter()
 
 
 @sensor_route.post("/sensors/", response_model=SensorSchema, status_code=status.HTTP_201_CREATED)
-def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
-    return Engine.create_sensor(sensor, db)
+async def create_sensor(sensor: SensorCreate, db: AsyncSession = Depends(get_db)):
+    return await Engine.create_sensor(sensor, db)
 
 
 @sensor_route.post("/entries/", response_model=EntriesSchema, status_code=status.HTTP_201_CREATED)
-def create_entry(entry: EntriesSchema, db: Session = Depends(get_db)):
-    return Engine.create_entry(entry, db)
+async def create_entry(entry: EntriesSchema, db: AsyncSession = Depends(get_db)):
+    return await Engine.create_entry(entry, db)

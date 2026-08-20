@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Entries as EntriesModel
 from models import Sensor as SensorModel
@@ -14,8 +14,8 @@ logger = logging.getLogger("uvicorn.error")
 
 class Engine:
 	@staticmethod
-	def create_sensor(sensor: SensorCreate, db: Session) -> SensorModel:
-		if db.get(SensorModel, sensor.sid) is not None:
+	async def create_sensor(sensor: SensorCreate, db: AsyncSession) -> SensorModel:
+		if await db.get(SensorModel, sensor.sid) is not None:
 			logger.error("Sensor '%s' already exists", sensor.sid)
 			raise HTTPException(
 				status_code=status.HTTP_409_CONFLICT,
@@ -29,10 +29,11 @@ class Engine:
 		)
 		try:
 			db.add(db_item)
-			db.commit()
+			await db.commit()
+			await db.refresh(db_item)
 			return db_item
 		except SQLAlchemyError:
-			db.rollback()
+			await db.rollback()
 			logger.exception("Failed to save sensor '%s'", sensor.sid)
 			raise HTTPException(
 				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -40,15 +41,15 @@ class Engine:
 			)
 
 	@staticmethod
-	def create_entry(entry: EntriesSchema, db: Session) -> EntriesModel:
-		if db.get(SensorModel, entry.sensor_id) is None:
+	async def create_entry(entry: EntriesSchema, db: AsyncSession) -> EntriesModel:
+		if await db.get(SensorModel, entry.sensor_id) is None:
 			logger.error("Sensor '%s' does not exist", entry.sensor_id)
 			raise HTTPException(
 				status_code=status.HTTP_404_NOT_FOUND,
 				detail=f"Sensor '{entry.sensor_id}' does not exist",
 			)
 
-		if db.get(EntriesModel, (entry.sensor_id, entry.timestamp)) is not None:
+		if await db.get(EntriesModel, (entry.sensor_id, entry.timestamp)) is not None:
 			logger.error(
 				"Entry for sensor '%s' at '%s' already exists",
 				entry.sensor_id,
@@ -66,10 +67,11 @@ class Engine:
 		)
 		try:
 			db.add(db_item)
-			db.commit()
+			await db.commit()
+			await db.refresh(db_item)
 			return db_item
 		except SQLAlchemyError:
-			db.rollback()
+			await db.rollback()
 			logger.exception(
 				"Failed to save entry for sensor '%s'", entry.sensor_id
 			)
