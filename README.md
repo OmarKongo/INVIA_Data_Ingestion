@@ -138,15 +138,19 @@ global FastAPI validation handler and return `422 Unprocessable Entity`.
 
 ## Database
 
-The service uses SQLite with the URL `sqlite:///./test.db`. The SQLAlchemy
-engine and connection pool are initialized when the application starts. A
-short-lived session is created for each request and closed afterward; the
-underlying connections are returned to the engine pool.
+The service uses SQLite through SQLAlchemy's asynchronous `aiosqlite` driver
+with the URL `sqlite+aiosqlite:///./test.db`. The async engine and its
+connection pool are initialized when the application starts. Each request
+receives its own short-lived `AsyncSession`, which is closed afterward so the
+underlying connection can be returned to the pool. Sessions are not shared
+between simultaneous requests.
 
-The tables are created from the model metadata during application startup:
+The application creates the tables during its async startup lifecycle using
+the model metadata:
 
 - `sensor`: keyed by `sid`
 - `entries`: keyed by `(sensor_id, timestamp)` and linked to `sensor.sid`
+
 
 ## Running Locally
 
