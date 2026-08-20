@@ -8,6 +8,8 @@ SQLite database through SQLAlchemy.
 ```text
 .
 ├── README.md
+├── docker/
+│   └── Dockerfile             # Container image and Uvicorn startup configuration
 └── src/
     ├── main.py                 # FastAPI application and startup table creation
     ├── route.py                # HTTP routes and dependency injection
@@ -158,6 +160,77 @@ uvicorn main:app --reload
 
 The API is available at `http://127.0.0.1:8000`. Interactive API documentation
 is available at `http://127.0.0.1:8000/docs`.
+
+## Running with Docker
+
+Docker must be installed and running before building the image. From the
+repository root, run:
+
+```bash
+docker --version
+docker info
+```
+
+If both commands complete successfully, build and start the service from the
+`docker` directory with one command:
+
+```bash
+cd docker
+docker build -f Dockerfile -t data_ingestion_image .. && docker run -d --name data_ingestion_container -p 8000:8000 data_ingestion_image
+```
+
+The command builds the image, starts the container in detached mode, names the
+container `data_ingestion_container`, and maps host port `8000` to container
+port `8000`.
+
+Check that the container is running:
+
+```bash
+docker ps --filter name=data_ingestion_container
+```
+
+Check the service through its health endpoint:
+
+```bash
+curl http://localhost:8000/
+```
+
+The expected response is:
+
+```json
+{
+	"message": "Welcome to the FastAPI CRUD API!"
+}
+```
+
+Test the sensor creation endpoint:
+
+```bash
+curl -X POST http://localhost:8000/sensors/ \
+	-H "Content-Type: application/json" \
+	-d '{"sid":"sensor-001","s_name":"Temperature Sensor","s_vendor":"Acme"}'
+```
+
+Test the entry creation endpoint using the sensor created above:
+
+```bash
+curl -X POST http://localhost:8000/entries/ \
+	-H "Content-Type: application/json" \
+	-d '{"sensor_id":"sensor-001","timestamp":"2026-08-20T12:30:00Z","reading":23.7}'
+```
+
+View container logs if the service does not respond:
+
+```bash
+docker logs data_ingestion_container
+```
+
+Stop and remove the container when finished:
+
+```bash
+docker stop data_ingestion_container
+docker rm data_ingestion_container
+```
 
 ## Scaling Considerations
 
